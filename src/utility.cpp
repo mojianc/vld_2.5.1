@@ -208,6 +208,7 @@ DWORD FilterFunction(long)
 //
 //    Returns pointer to descriptor.
 //
+//获取importmodule导入exportmodulename模块的节头的地址；如果没有导入exportmodulename模块，则返回null
 IMAGE_IMPORT_DESCRIPTOR* FindOriginalImportDescriptor (HMODULE importmodule, LPCSTR exportmodulename)
 {
     IMAGE_IMPORT_DESCRIPTOR* idte = NULL;
@@ -219,15 +220,19 @@ IMAGE_IMPORT_DESCRIPTOR* FindOriginalImportDescriptor (HMODULE importmodule, LPC
     // one for each export module that it imports something from. The IDT entry
     // gives us the offset of the IAT for the module we are interested in.
     {
+		//获取importmodule导入表节头的首地址
         idte = (IMAGE_IMPORT_DESCRIPTOR*)g_Ide.ImageDirectoryEntryToDataEx((PVOID)GetCallingModule((UINT_PTR)importmodule), TRUE,
             IMAGE_DIRECTORY_ENTRY_IMPORT, &size, &section);
     }
-
+	//如果idte为null，说明importmodule并未导入exportmodulename模块，返回NULL
     if (idte == NULL) {
         // This module has no IDT (i.e. it imports nothing).
         return NULL;
     }
+	//依次遍历节头
     while (idte->OriginalFirstThunk != 0x0) {
+		//#define R2VA(moduleBase, rva)  (((PBYTE)moduleBase) + rva)
+		//idte->Name为name所在地址的偏移量
         PCHAR name = (PCHAR)R2VA(importmodule, idte->Name);
         if (_stricmp(name, exportmodulename) == 0) {
             // Found the IDT entry for the exporting module.
@@ -271,12 +276,14 @@ BOOL FindImport (HMODULE importmodule, HMODULE exportmodule, LPCSTR exportmodule
     FARPROC                  import;
 
     DbgTrace(L"dbghelp32.dll %i: FindImport - ImageDirectoryEntryToDataEx\n", GetCurrentThreadId());
+	//获取importmodule导入exportmodulename模块的导入表
     idte = FindOriginalImportDescriptor(importmodule, exportmodulename);
     if (idte == NULL)
         return FALSE;
 
     // Get the *real* address of the import. If we find this address in the IAT,
     // then we've found that the module does import the named import.
+	//获取符号importname在exportmodule模块中的地址
     import = GetProcAddress(exportmodule, importname);
 
     // Perhaps the named export module does not actually export the named import?
@@ -291,8 +298,10 @@ BOOL FindImport (HMODULE importmodule, HMODULE exportmodule, LPCSTR exportmodule
     }
 
     // Locate the import's IAT entry.
+	//获取导入表中指向导入函数列表的首地址
     iate = (IMAGE_THUNK_DATA*)R2VA(importmodule, idte->FirstThunk);
     while (iate->u1.Function != 0x0) {
+		//判断导入函数地址中是否包含import
         if (iate->u1.Function == (DWORD_PTR)import) {
             // Found the IAT entry. The module imports the named import.
             return TRUE;
@@ -1175,6 +1184,7 @@ HMODULE GetCallingModule( UINT_PTR pCaller )
 {
     HMODULE hModule = NULL;
     MEMORY_BASIC_INFORMATION mbi;
+	//查询pCaller所在内存地址的信息
     if ( VirtualQuery((LPCVOID)pCaller, &mbi, sizeof(MEMORY_BASIC_INFORMATION)) == sizeof(MEMORY_BASIC_INFORMATION) )
     {
         // the allocation base is the beginning of a PE file

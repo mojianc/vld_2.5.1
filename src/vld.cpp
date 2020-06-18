@@ -899,6 +899,7 @@ VOID VisualLeakDetector::attachToLoadedModules (ModuleSet *newmodules)
         (*updateit).flags = moduleFlags;
 
         // Attach to the module.
+		//modulelocal中导入了vld_x86的"?g_vld@@3VVisualLeakDetector@@A"，将modulelocal中导入表中的函数用m_patchTable中记录的函数地址全部hook
         PatchModule(modulelocal, m_patchTable, _countof(m_patchTable));
 
         FreeLibrary(modulelocal);
@@ -2348,6 +2349,7 @@ bool VisualLeakDetector::isModuleExcluded(UINT_PTR address)
 
     CriticalSectionLocker<> cs(g_vld.m_modulesLock);
     moduleit = g_vld.m_loadedModules->find(moduleinfo);
+	//遍历vld加载的模块，判断是否在“排除模块”之列
     if (moduleit != g_vld.m_loadedModules->end())
         return (*moduleit).flags & VLD_MODULE_EXCLUDED ? true : false;
     return false;
@@ -2899,7 +2901,12 @@ int VisualLeakDetector::ResolveCallstacks()
     }
     return unresolvedFunctionsCount;
 }
-
+/*
+  func     函数指针
+  context  上下文
+  debug    是否是debug
+  ucrt     是否是ucrt，(CRTVersion >= 140)
+*/
 CaptureContext::CaptureContext(void* func, context_t& context, BOOL debug, BOOL ucrt) : m_context(context) {
     context.func = reinterpret_cast<UINT_PTR>(func);
     m_tls = g_vld.getTls();
@@ -2911,8 +2918,9 @@ CaptureContext::CaptureContext(void* func, context_t& context, BOOL debug, BOOL 
     if (ucrt) {
         m_tls->flags |= VLD_TLS_UCRT;
     }
-
+	//GET_RETURN_ADDRESS(m_tls->context) 相当于 m_tls->context.fp
     m_bFirst = (GET_RETURN_ADDRESS(m_tls->context) == NULL);
+	//如果m_tls->context.fp为NULL，说明是第一次调用，保存当前的centext
     if (m_bFirst) {
         // This is the first call to enter VLD for the current allocation.
         // Record the current frame pointer.
@@ -2981,10 +2989,11 @@ void CaptureContext::Reset() {
 }
 
 BOOL CaptureContext::IsExcludedModule() {
+	//返回调用模块的句柄
     HMODULE hModule = GetCallingModule(m_context.fp);
     if (hModule == g_vld.m_dbghlpBase)
         return TRUE;
-
+	//遍历m_patchTable中dll的moduleBase，判断当前检测的模块是否要reportLeaks
     UINT tablesize = _countof(g_vld.m_patchTable);
     for (UINT index = 0; index < tablesize; index++) {
         if (((HMODULE)g_vld.m_patchTable[index].moduleBase == hModule)) {

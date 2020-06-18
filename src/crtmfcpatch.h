@@ -899,7 +899,15 @@ void* CrtPatch<CRTVersion, debug>::crtd_scalar_new (size_t size)
     PRINT_HOOKED_FUNCTION();
     new_t pcrtxxd_scalar_new = (new_t)data.pcrtd_scalar_new;
     assert(pcrtxxd_scalar_new);
-
+	/*
+	初始化上下文，context_.fp保存函数返回地址的下一条指令的地址
+	#define CAPTURE_CONTEXT()                                                       \
+	context_t context_;                                                         \
+	{CONTEXT _ctx;                                                              \
+	RtlCaptureContext(&_ctx);                                                   \
+	context_.Ebp = _ctx.Ebp; context_.Esp = _ctx.Esp; context_.Eip = _ctx.Eip;  \
+	context_.fp = (UINT_PTR)_ReturnAddress();}
+	*/
     CAPTURE_CONTEXT();
     CaptureContext cc((void*)pcrtxxd_scalar_new, context_, debug, (CRTVersion >= 140));
     return pcrtxxd_scalar_new(size);
