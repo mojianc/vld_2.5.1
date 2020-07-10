@@ -2989,6 +2989,11 @@ void CaptureContext::Reset() {
 }
 
 BOOL CaptureContext::IsExcludedModule() {
+
+#ifdef IGNORE_MFC_CHECK
+        return g_vld.isModuleExcluded(m_tls->context.fp);
+#endif // IGNORE_MFC_CHECK
+
 	//返回调用模块的句柄
     HMODULE hModule = GetCallingModule(m_context.fp);
     if (hModule == g_vld.m_dbghlpBase)
