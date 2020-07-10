@@ -11,7 +11,7 @@ Last Modified:    Feb 7,1999
 Version:        1.3
 */
 #pragma warning(disable:4996 4554)
-#include "Common/QProfile.h"
+#include "QProfile.h"
 #include <stdio.h>
 #include <cstring>
 #ifdef _WIN32

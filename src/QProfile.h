@@ -5,9 +5,6 @@
 #define REM(param)
 #endif
 
-
-
-#include "Common/Common.h"
 #include <stdint.h>
 
 #if defined(_MSC_VER)
@@ -20,7 +17,7 @@
 
 //#define QPROFILE_REMOVE
 
-void SYS_COMMON_API GetCPUFreq(int64_t & v);
+void  GetCPUFreq(int64_t & v);
 
 #define GET_TIMER_FREQ(val)        GetCPUFreq(val)
 
@@ -67,7 +64,7 @@ REM("============QProfile======================")
     extern int64_t          g_timerFrequency;
 
 
-class SYS_COMMON_API QProfile {
+class  QProfile {
     friend class QProfileStarter;
 
 public:
@@ -112,8 +109,8 @@ public:
     static void PrintMemorySummary();
 };
 
-SYS_COMMON_API int  QPAddMemoryStatus(const char * tag);
-SYS_COMMON_API double  QPMemoryDiffent(const char * tag1, const char * tag2);
+ int  QPAddMemoryStatus(const char * tag);
+ double  QPMemoryDiffent(const char * tag1, const char * tag2);
 
 extern QProfile            QProfile_Program;
 
@@ -158,7 +155,7 @@ REM("============Start=========================")
         REM("============QProfile_Starter==============")
             REM("============QProfile_Starter==============")
             REM("============QProfile_Starter==============")
-        class SYS_COMMON_API QProfileStarter {
+        class  QProfileStarter {
             QProfile *            Profile;
             QProfileStarter *    Parent;
             int64_t              StartTime;
